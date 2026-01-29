@@ -27,9 +27,9 @@ static void xmap_set(uptr *map, int shift, u32 start_addr, u32 end_addr,
     const void *func_or_mh, int is_func)
 {
 #ifdef __clang__
-  // workaround bug (segfault) in
+  // workaround bug (segfault) in 
   // Apple LLVM version 4.2 (clang-425.0.27) (based on LLVM 3.2svn)
-  volatile
+  volatile 
 #endif
   uptr addr = (uptr)func_or_mh;
   int mask = (1 << shift) - 1;
