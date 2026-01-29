@@ -293,9 +293,11 @@ int pico_load_rom(const char *filename)
 
     lprintf("pico_load_rom: loading %s (%u bytes)\n", filename, rom_size);
 
-    /* Load the ROM */
+    /* Load the ROM
+     * Note: Pass empty string for carthw_cfg so that parse_carthw() gets called
+     * and uses the built-in carthw database for SVP/special hardware detection */
     enum media_type_e media_type = PicoLoadMedia(filename, rom_data, rom_size,
-                                                  NULL, NULL, NULL, NULL);
+                                                  "", NULL, NULL, NULL);
 
     if (media_type <= 0) {
         lprintf("pico_load_rom: failed, error %d\n", media_type);
