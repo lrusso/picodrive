@@ -48,6 +48,12 @@
             padding: 10px;
             border-radius: 8px;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            /* Fixed container size to prevent layout shifts */
+            width: 660px;
+            height: 468px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #screen {
@@ -55,6 +61,9 @@
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             background: #000;
+            /* Fixed display size - canvas scales to fit */
+            width: 640px;
+            height: 448px;
         }
 
         .controls-section {
@@ -181,14 +190,20 @@
             text-decoration: none;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
             body {
                 padding: 10px;
             }
 
+            #canvas-container {
+                width: calc(100vw - 20px);
+                height: auto;
+                aspect-ratio: 640 / 448;
+            }
+
             #screen {
                 width: 100%;
-                height: auto;
+                height: 100%;
             }
         }
     </style>
@@ -324,7 +339,6 @@
             let videoWidth = 320;
             let videoHeight = 224;
             let imageData = null;
-            let screenScale = 2;
 
             // Offscreen canvas for rendering at native resolution
             let offscreenCanvas = document.createElement('canvas');
@@ -399,9 +413,9 @@
                 offscreenCanvas.width = width;
                 offscreenCanvas.height = height;
                 imageData = offscreenCtx.createImageData(width, height);
-                // Set display canvas to scaled size
-                canvas.width = width * screenScale;
-                canvas.height = height * screenScale;
+                // Set canvas to native resolution (CSS handles scaling)
+                canvas.width = width;
+                canvas.height = height;
                 console.log('Video mode changed:', width, 'x', height);
             };
 
@@ -468,9 +482,9 @@
                 offscreenCanvas.width = videoWidth;
                 offscreenCanvas.height = videoHeight;
                 imageData = offscreenCtx.createImageData(videoWidth, videoHeight);
-                // Set display canvas to scaled size
-                canvas.width = videoWidth * screenScale;
-                canvas.height = videoHeight * screenScale;
+                // Set canvas to native resolution (CSS handles scaling)
+                canvas.width = videoWidth;
+                canvas.height = videoHeight;
             };
 
             // Load ROM from file
@@ -547,9 +561,9 @@
                     offscreenCanvas.width = width;
                     offscreenCanvas.height = height;
                     imageData = offscreenCtx.createImageData(width, height);
-                    // Set display canvas to scaled size
-                    canvas.width = width * screenScale;
-                    canvas.height = height * screenScale;
+                    // Set canvas to native resolution (CSS handles scaling)
+                    canvas.width = width;
+                    canvas.height = height;
                     console.log('Video mode:', width, 'x', height);
                 }
 
