@@ -238,25 +238,45 @@
                 <h3>Keyboard Controls</h3>
                 <div class="key-mappings">
                     <div class="key-group">
-                        <h4>D-Pad</h4>
-                        <div class="key-item"><span>Up</span><span class="key">W / Arrow Up</span></div>
-                        <div class="key-item"><span>Down</span><span class="key">S / Arrow Down</span></div>
-                        <div class="key-item"><span>Left</span><span class="key">A / Arrow Left</span></div>
-                        <div class="key-item"><span>Right</span><span class="key">D / Arrow Right</span></div>
+                        <h4>Player 1 - D-Pad</h4>
+                        <div class="key-item"><span>Up</span><span class="key">↑</span></div>
+                        <div class="key-item"><span>Down</span><span class="key">↓</span></div>
+                        <div class="key-item"><span>Left</span><span class="key">←</span></div>
+                        <div class="key-item"><span>Right</span><span class="key">→</span></div>
                     </div>
                     <div class="key-group">
-                        <h4>Buttons</h4>
-                        <div class="key-item"><span>A</span><span class="key">J</span></div>
-                        <div class="key-item"><span>B</span><span class="key">K</span></div>
-                        <div class="key-item"><span>C</span><span class="key">L</span></div>
+                        <h4>Player 1 - Buttons</h4>
+                        <div class="key-item"><span>A</span><span class="key">A</span></div>
+                        <div class="key-item"><span>B</span><span class="key">S</span></div>
+                        <div class="key-item"><span>C</span><span class="key">D</span></div>
                         <div class="key-item"><span>Start</span><span class="key">Enter</span></div>
                     </div>
                     <div class="key-group">
-                        <h4>6-Button (Optional)</h4>
-                        <div class="key-item"><span>X</span><span class="key">U</span></div>
-                        <div class="key-item"><span>Y</span><span class="key">I</span></div>
-                        <div class="key-item"><span>Z</span><span class="key">O</span></div>
+                        <h4>Player 1 - 6-Button</h4>
+                        <div class="key-item"><span>X</span><span class="key">Q</span></div>
+                        <div class="key-item"><span>Y</span><span class="key">W</span></div>
+                        <div class="key-item"><span>Z</span><span class="key">E</span></div>
                         <div class="key-item"><span>Mode</span><span class="key">Shift</span></div>
+                    </div>
+                    <div class="key-group">
+                        <h4>Player 2 - D-Pad</h4>
+                        <div class="key-item"><span>Up</span><span class="key">I</span></div>
+                        <div class="key-item"><span>Down</span><span class="key">K</span></div>
+                        <div class="key-item"><span>Left</span><span class="key">J</span></div>
+                        <div class="key-item"><span>Right</span><span class="key">L</span></div>
+                    </div>
+                    <div class="key-group">
+                        <h4>Player 2 - Buttons</h4>
+                        <div class="key-item"><span>A</span><span class="key">B</span></div>
+                        <div class="key-item"><span>B</span><span class="key">N</span></div>
+                        <div class="key-item"><span>C</span><span class="key">M</span></div>
+                        <div class="key-item"><span>Start</span><span class="key">H</span></div>
+                    </div>
+                    <div class="key-group">
+                        <h4>Player 2 - 6-Button</h4>
+                        <div class="key-item"><span>X</span><span class="key">U</span></div>
+                        <div class="key-item"><span>Y</span><span class="key">O</span></div>
+                        <div class="key-item"><span>Z</span><span class="key">P</span></div>
                     </div>
                 </div>
             </div>
@@ -319,8 +339,9 @@
             let animFrameId = null;
             let currentRomFilename = '';
 
-            // Input state
-            let inputState = 0;
+            // Input state for both players
+            let inputState1 = 0;
+            let inputState2 = 0;
 
             // Button mappings
             let BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT;
@@ -615,8 +636,9 @@
                 // Run emulation frames at correct rate
                 let framesRun = 0;
                 while (frameAccumulator >= targetFrameTime && framesRun < 3) {
-                    // Set input
-                    _pico_set_input(0, inputState);
+                    // Set input for both players
+                    _pico_set_input(0, inputState1);
+                    _pico_set_input(1, inputState2);
 
                     // Run one frame
                     _pico_run_frame();
@@ -634,58 +656,91 @@
                 animFrameId = requestAnimationFrame(runFrame);
             }
 
-            // Keyboard handling
-            const keyMap = {
-                'KeyW': 'UP', 'ArrowUp': 'UP',
-                'KeyS': 'DOWN', 'ArrowDown': 'DOWN',
-                'KeyA': 'LEFT', 'ArrowLeft': 'LEFT',
-                'KeyD': 'RIGHT', 'ArrowRight': 'RIGHT',
-                'KeyJ': 'A',
-                'KeyK': 'B',
-                'KeyL': 'C',
+            // Keyboard handling - Player 1 and Player 2 key mappings
+            const keyMapPlayer1 = {
+                'ArrowUp': 'UP',
+                'ArrowDown': 'DOWN',
+                'ArrowLeft': 'LEFT',
+                'ArrowRight': 'RIGHT',
                 'Enter': 'START',
-                'KeyU': 'X',
-                'KeyI': 'Y',
-                'KeyO': 'Z',
+                'KeyA': 'A',
+                'KeyS': 'B',
+                'KeyD': 'C',
+                'KeyQ': 'X',
+                'KeyW': 'Y',
+                'KeyE': 'Z',
                 'ShiftLeft': 'MODE', 'ShiftRight': 'MODE'
             };
 
-            function updateInput(code, pressed) {
-                const action = keyMap[code];
-                if (!action) return;
+            const keyMapPlayer2 = {
+                'KeyI': 'UP',
+                'KeyK': 'DOWN',
+                'KeyJ': 'LEFT',
+                'KeyL': 'RIGHT',
+                'KeyH': 'START',
+                'KeyB': 'A',
+                'KeyN': 'B',
+                'KeyM': 'C',
+                'KeyU': 'X',
+                'KeyO': 'Y',
+                'KeyP': 'Z'
+            };
 
-                let btn = 0;
+            function actionToButton(action) {
                 switch (action) {
-                    case 'UP': btn = BTN_UP; break;
-                    case 'DOWN': btn = BTN_DOWN; break;
-                    case 'LEFT': btn = BTN_LEFT; break;
-                    case 'RIGHT': btn = BTN_RIGHT; break;
-                    case 'A': btn = BTN_A; break;
-                    case 'B': btn = BTN_B; break;
-                    case 'C': btn = BTN_C; break;
-                    case 'START': btn = BTN_START; break;
-                    case 'X': btn = BTN_X; break;
-                    case 'Y': btn = BTN_Y; break;
-                    case 'Z': btn = BTN_Z; break;
-                    case 'MODE': btn = BTN_MODE; break;
-                }
-
-                if (pressed) {
-                    inputState |= btn;
-                } else {
-                    inputState &= ~btn;
+                    case 'UP': return BTN_UP;
+                    case 'DOWN': return BTN_DOWN;
+                    case 'LEFT': return BTN_LEFT;
+                    case 'RIGHT': return BTN_RIGHT;
+                    case 'A': return BTN_A;
+                    case 'B': return BTN_B;
+                    case 'C': return BTN_C;
+                    case 'START': return BTN_START;
+                    case 'X': return BTN_X;
+                    case 'Y': return BTN_Y;
+                    case 'Z': return BTN_Z;
+                    case 'MODE': return BTN_MODE;
+                    default: return 0;
                 }
             }
 
+            function updateInput(code, pressed) {
+                // Check Player 1
+                const action1 = keyMapPlayer1[code];
+                if (action1) {
+                    const btn = actionToButton(action1);
+                    if (pressed) {
+                        inputState1 |= btn;
+                    } else {
+                        inputState1 &= ~btn;
+                    }
+                }
+
+                // Check Player 2
+                const action2 = keyMapPlayer2[code];
+                if (action2) {
+                    const btn = actionToButton(action2);
+                    if (pressed) {
+                        inputState2 |= btn;
+                    } else {
+                        inputState2 &= ~btn;
+                    }
+                }
+            }
+
+            function isGameKey(code) {
+                return keyMapPlayer1[code] || keyMapPlayer2[code];
+            }
+
             document.addEventListener('keydown', function(e) {
-                if (keyMap[e.code]) {
+                if (isGameKey(e.code)) {
                     e.preventDefault();
                     updateInput(e.code, true);
                 }
             });
 
             document.addEventListener('keyup', function(e) {
-                if (keyMap[e.code]) {
+                if (isGameKey(e.code)) {
                     e.preventDefault();
                     updateInput(e.code, false);
                 }
