@@ -504,7 +504,8 @@ int pico_get_region(void)
 }
 
 /* Save state support - based on libretro implementation */
-#define STATE_MAX_SIZE (512 * 1024)  /* 512KB should be enough for any state */
+/* 32X states need ~700KB+ (256KB SDRAM + 256KB DRAM + base Genesis state) */
+#define STATE_MAX_SIZE (2 * 1024 * 1024)  /* 2MB to safely handle 32X states */
 static unsigned char *state_buffer = NULL;
 static size_t state_size = 0;
 
