@@ -123,11 +123,6 @@
           min-height: 24px;
       }
 
-      #game-name {
-          color: #00d4ff;
-          font-weight: 600;
-      }
-
       #status {
           color: #888;
           font-size: 14px;
@@ -219,7 +214,6 @@
         </div>
 
         <div class="game-info">
-          <div id="game-name"></div>
           <div id="status">Loading emulator...</div>
         </div>
 
@@ -349,7 +343,6 @@
         const resetBtn = document.getElementById("reset-btn")
         const saveStateBtn = document.getElementById("save-state-btn")
         const loadStateBtn = document.getElementById("load-state-btn")
-        const gameName = document.getElementById("game-name")
         const status = document.getElementById("status")
 
         // Emulator state
@@ -394,7 +387,6 @@
         let _pico_get_state_size
         let _pico_get_state_load_buffer
         let _pico_is_pal
-        let _pico_get_rom_name
 
         // Video
         let videoWidth = 320
@@ -521,7 +513,6 @@
             []
           )
           _pico_is_pal = Module.cwrap("pico_is_pal", "number", [])
-          _pico_get_rom_name = Module.cwrap("pico_get_rom_name", "string", [])
           _pico_state_save = Module.cwrap("pico_state_save", "number", [])
           _pico_state_load = Module.cwrap("pico_state_load", "number", [])
           _pico_get_state_buffer = Module.cwrap(
@@ -607,8 +598,6 @@
               currentRomFilename = file.name
 
               // Update UI
-              const name = _pico_get_rom_name()
-              gameName.textContent = name || file.name
               resetBtn.disabled = false
               saveStateBtn.disabled = false
               loadStateBtn.disabled = false
