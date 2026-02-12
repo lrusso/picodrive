@@ -41,18 +41,36 @@ static void xmap_set(uptr *map, int shift, u32 start_addr, u32 end_addr,
     return;
   }
 
+#ifdef __EMSCRIPTEN__
+  // In Emscripten, function pointers are small table indices (1, 3, 5, ...)
+  // which are odd numbers. Skip alignment check for function pointers.
+  if (!is_func && (addr & 1)) {
+    elprintf(EL_STATUS|EL_ANOMALY, "xmap_set: ptr is not aligned: %08lx", addr);
+    return;
+  }
+#else
   if (addr & 1) {
     elprintf(EL_STATUS|EL_ANOMALY, "xmap_set: ptr is not aligned: %08lx", addr);
     return;
   }
+#endif
 
   if (!is_func)
     addr -= start_addr;
 
   for (i = start_addr >> shift; i <= end_addr >> shift; i++) {
+#ifdef __EMSCRIPTEN__
+    // In Emscripten, function pointers are table indices that can't be shifted
+    // without losing data. Store them directly with the flag bit.
+    if (is_func)
+      map[i] = addr | MAP_FLAG;
+    else
+      map[i] = addr >> 1;
+#else
     map[i] = addr >> 1;
     if (is_func)
       map[i] |= MAP_FLAG;
+#endif
   }
 }
 
@@ -244,6 +262,23 @@ void m68k_map_unmap(u32 start_addr, u32 end_addr)
   int shift = M68K_MEM_SHIFT;
   int i;
 
+#ifdef __EMSCRIPTEN__
+  addr = (uptr)m68k_unmapped_read8;
+  for (i = start_addr >> shift; i <= end_addr >> shift; i++)
+    m68k_read8_map[i] = addr | MAP_FLAG;
+
+  addr = (uptr)m68k_unmapped_read16;
+  for (i = start_addr >> shift; i <= end_addr >> shift; i++)
+    m68k_read16_map[i] = addr | MAP_FLAG;
+
+  addr = (uptr)m68k_unmapped_write8;
+  for (i = start_addr >> shift; i <= end_addr >> shift; i++)
+    m68k_write8_map[i] = addr | MAP_FLAG;
+
+  addr = (uptr)m68k_unmapped_write16;
+  for (i = start_addr >> shift; i <= end_addr >> shift; i++)
+    m68k_write16_map[i] = addr | MAP_FLAG;
+#else
   addr = (uptr)m68k_unmapped_read8;
   for (i = start_addr >> shift; i <= end_addr >> shift; i++)
     m68k_read8_map[i] = (addr >> 1) | MAP_FLAG;
@@ -259,6 +294,7 @@ void m68k_map_unmap(u32 start_addr, u32 end_addr)
   addr = (uptr)m68k_unmapped_write16;
   for (i = start_addr >> shift; i <= end_addr >> shift; i++)
     m68k_write16_map[i] = (addr >> 1) | MAP_FLAG;
+#endif
 }
 
 #ifndef _ASM_MEMORY_C
