@@ -1743,6 +1743,7 @@ PICO_INTERNAL void PicoFrameStart(void)
   int sprep = est->rendstatus & PDRAW_DIRTY_SPRITES;
   int skipped = est->rendstatus & PDRAW_SKIP_FRAME;
   int sync = est->rendstatus & (PDRAW_SYNC_NEEDED | PDRAW_SYNC_NEXT);
+  int prev_disp_on = est->rendstatus & PDRAW_DISP_WAS_ON;
 
   // prepare to do this frame
   est->rendstatus = 0;
@@ -1791,7 +1792,7 @@ PICO_INTERNAL void PicoFrameStart(void)
     est->rendstatus |= PDRAW_PARSE_SPRITES;
   if (est->Pico->video.reg[1] & 0x40)
     est->rendstatus |= PDRAW_DISP_WAS_ON;
-  else
+  else if (prev_disp_on)
     est->rendstatus |= PDRAW_DISP_OFF_START;
 
   est->HighCol = HighColBase + loffs * HighColIncrement;
@@ -1813,8 +1814,10 @@ static void DrawBlankedLine(int line, int offs, int sh, int bgc)
   int skip = skip_next_line;
 
   // Retain previous content for display-off lines before first enable (see PicoLine).
+  // Only when previous frame had display on (carryover, not intentional blank).
   // Not for 32X: FinalizeLine composites the 32X layer and must not be skipped.
-  if (!(est->rendstatus & PDRAW_DISP_WAS_ON) && !(PicoIn.AHW & PAHW_32X)) {
+  if ((est->rendstatus & PDRAW_DISP_OFF_START) &&
+      !(est->rendstatus & PDRAW_DISP_WAS_ON) && !(PicoIn.AHW & PAHW_32X)) {
     skip_next_line = 0;
     est->HighCol += HighColIncrement;
     est->DrawLineDest = (char *)est->DrawLineDest + DrawLineDestIncrement;
@@ -1851,8 +1854,10 @@ static void PicoLine(int line, int offs, int sh, int bgc, int off, int on)
   // If display is off and was never on this frame, retain previous frame's content.
   // This avoids blanking lines when display re-enable is delayed across a frame
   // boundary (e.g. Another World's multi-frame rendering cycle).
+  // Only when previous frame had display on (carryover, not intentional blank).
   // Not for 32X: FinalizeLine composites the 32X layer and must not be skipped.
   if (!(est->Pico->video.reg[1]&0x40) && !(off|on) &&
+      (est->rendstatus & PDRAW_DISP_OFF_START) &&
       !(est->rendstatus & PDRAW_DISP_WAS_ON) && !(PicoIn.AHW & PAHW_32X)) {
     skip_next_line = 0;
     est->HighCol += HighColIncrement;
