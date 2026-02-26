@@ -1789,6 +1789,10 @@ PICO_INTERNAL void PicoFrameStart(void)
     est->rendstatus |= PDRAW_SKIP_FRAME;
   if (sprep | skipped)
     est->rendstatus |= PDRAW_PARSE_SPRITES;
+  if (est->Pico->video.reg[1] & 0x40)
+    est->rendstatus |= PDRAW_DISP_WAS_ON;
+  else
+    est->rendstatus |= PDRAW_DISP_OFF_START;
 
   est->HighCol = HighColBase + loffs * HighColIncrement;
   est->DrawLineDest = (char *)DrawLineDestBase + loffs * DrawLineDestIncrement;
@@ -1807,6 +1811,15 @@ static void DrawBlankedLine(int line, int offs, int sh, int bgc)
 {
   struct PicoEState *est = &Pico.est;
   int skip = skip_next_line;
+
+  // Retain previous content for display-off lines before first enable (see PicoLine).
+  // Not for 32X: FinalizeLine composites the 32X layer and must not be skipped.
+  if (!(est->rendstatus & PDRAW_DISP_WAS_ON) && !(PicoIn.AHW & PAHW_32X)) {
+    skip_next_line = 0;
+    est->HighCol += HighColIncrement;
+    est->DrawLineDest = (char *)est->DrawLineDest + DrawLineDestIncrement;
+    return;
+  }
 
   if (PicoScanBegin != NULL && skip == 0)
     skip = PicoScanBegin(line + offs);
@@ -1834,6 +1847,19 @@ static void PicoLine(int line, int offs, int sh, int bgc, int off, int on)
   int skip = skip_next_line;
 
   est->DrawScanline = line;
+
+  // If display is off and was never on this frame, retain previous frame's content.
+  // This avoids blanking lines when display re-enable is delayed across a frame
+  // boundary (e.g. Another World's multi-frame rendering cycle).
+  // Not for 32X: FinalizeLine composites the 32X layer and must not be skipped.
+  if (!(est->Pico->video.reg[1]&0x40) && !(off|on) &&
+      !(est->rendstatus & PDRAW_DISP_WAS_ON) && !(PicoIn.AHW & PAHW_32X)) {
+    skip_next_line = 0;
+    est->HighCol += HighColIncrement;
+    est->DrawLineDest = (char *)est->DrawLineDest + DrawLineDestIncrement;
+    return;
+  }
+
   if (PicoScanBegin != NULL && skip == 0)
     skip = PicoScanBegin(line + offs);
 
@@ -1901,6 +1927,15 @@ void PicoDrawSync(int to, int off, int on)
   if (line <= to)
   {
     int width2 = (est->Pico->video.reg[12]&1) ? 160 : 128;
+
+    // For frames starting with display off, suppress partial blanking on the
+    // first display-enable line to retain previous frame's content there.
+    // Not for 32X: the 32X layer compositing must not be affected.
+    if ((est->rendstatus & PDRAW_DISP_OFF_START) && on && !off &&
+        !(PicoIn.AHW & PAHW_32X)) {
+      on = 0;
+      est->rendstatus &= ~PDRAW_DISP_OFF_START;
+    }
 
     if (unlikely(on|off) && (off >= width2 ||
           // hack for timing inaccuracy, if on/off near borders

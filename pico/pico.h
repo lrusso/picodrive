@@ -278,6 +278,8 @@ void PicoDoHighPal555(int sh, int line, struct PicoEState *est);
 #define PDRAW_SOFTSCALE    (1<<15) // H32 upscaling
 #define PDRAW_SYNC_NEEDED  (1<<16) // redraw needed
 #define PDRAW_SYNC_NEXT    (1<<17) // redraw next frame
+#define PDRAW_DISP_WAS_ON  (1<<18) // display was enabled at some point this frame
+#define PDRAW_DISP_OFF_START (1<<19) // display was off at frame start
 extern int rendstatus_old;
 extern int rendlines;
 

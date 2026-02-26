@@ -969,6 +969,8 @@ PICO_INTERNAL_ASM void PicoVideoWrite(u32 a,unsigned short d)
           lineenabled = (d&0x40) ? Pico.m.scanline + !skip: -1;
           linedisabled = (d&0x40) ? -1 : Pico.m.scanline + !skip;
           lineoffset = (skip ? SekCyclesDone() - Pico.t.m68c_line_start : 0);
+          if (d&0x40)
+            Pico.est.rendstatus |= PDRAW_DISP_WAS_ON;
         } else if (num == 5 && pvid->reg[num] != d) {
           PicoVideoSync(InHblank(105)); // chaekopan
         } else if (((1<<num) & 0x738ff) && pvid->reg[num] != d)
