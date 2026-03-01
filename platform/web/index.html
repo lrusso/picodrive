@@ -446,14 +446,12 @@
 
           const currentTime = audioCtx.currentTime
 
-          // If we"ve fallen too far behind, reset the schedule
-          if (nextAudioTime < currentTime) {
-            nextAudioTime = currentTime
-          }
-
-          // If we"re too far ahead (more than 100ms), skip this buffer to reduce latency
-          if (nextAudioTime > currentTime + MAX_AUDIO_LAG) {
-            return
+          const AUDIO_MAX_AHEAD = 0.15 // resync if audio drifts more than 150ms ahead
+          if (
+            nextAudioTime < currentTime ||
+            nextAudioTime > currentTime + AUDIO_MAX_AHEAD
+          ) {
+            nextAudioTime = currentTime + MAX_AUDIO_LAG
           }
 
           const source = audioCtx.createBufferSource()
