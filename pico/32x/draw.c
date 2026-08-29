@@ -120,6 +120,31 @@ static void convert_pal555(int invert_prio)
   }                                                               \
 }
 
+// The VDP fetches the data for a line with an address counter which wraps
+// around at the end of the 128 KB frame buffer. A line needs at most 320 words
+// of data (direct color, and run length with all runs 1 px long); if the line
+// data doesn't reach that far, fetching continues at the start of the frame
+// buffer. Virtua Racing Deluxe relies on this: it only has 256 words of data
+// for the last line, so the remaining 64 px are fetched from the frame buffer
+// start, which happens to be all background there.
+#define FB_WORDS	(0x20000/2)
+#define FB_LINE_WORDS	320
+
+static u16 fb_line_buf[FB_LINE_WORDS];
+
+static u16 *fb_line(u16 *dram, unsigned offs)
+{
+  unsigned avail = FB_WORDS - offs;
+
+  if (avail >= FB_LINE_WORDS)
+    return dram + offs;
+
+  // line data wraps around the end of the frame buffer, linearize it
+  memcpy(fb_line_buf, dram + offs, avail * 2);
+  memcpy(fb_line_buf + avail, dram, (FB_LINE_WORDS - avail) * 2);
+  return fb_line_buf;
+}
+
 #define MD_LAYER_CODE_H32 \
   *dst = dst[H32_OFFSET]
 
@@ -142,7 +167,7 @@ void FinalizeLine32xRGB555(int sh, int line, struct PicoEState *est)
   }
 
   dram = (void *)Pico32xMem->dram[Pico32x.vdp_regs[0x0a/2] & P32XV_FS];
-  p32x = dram + dram[line];
+  p32x = fb_line(dram, dram[line]);
   mdbg = Pico.video.reg[7] & 0x3f;
   if (h32) pmd += H32_OFFSET;
 
@@ -202,7 +227,7 @@ static void do_loop_dc##name(unsigned short *dst,               \
   (void)palmd;                                                  \
   for (l = 0; l < lines; l++, pmd += 8) {                       \
     pre_code;                                                   \
-    p32x = dram + dram[l + (lines_sft_offs >> 24)];             \
+    p32x = fb_line(dram, dram[l + (lines_sft_offs >> 24)]);     \
     do_line_dc(dst, p32x, pmd, inv_bit, md_code);               \
     post_code;                                                  \
     dst += DrawLineDestIncrement32x/2 - 320;                    \
@@ -224,7 +249,7 @@ static void do_loop_pp##name(unsigned short *dst,               \
   (void)palmd;                                                  \
   for (l = 0; l < lines; l++, pmd += 8) {                       \
     pre_code;                                                   \
-    p32x = (void *)(dram + dram[l + (lines_sft_offs >> 24)]);   \
+    p32x = (void *)fb_line(dram, dram[l + (lines_sft_offs >> 24)]); \
     p32x += (lines_sft_offs >> 8) & 1;                          \
     do_line_pp(dst, p32x, pmd, md_code);                        \
     post_code;                                                  \
@@ -247,7 +272,7 @@ static void do_loop_rl##name(unsigned short *dst,               \
   (void)palmd;                                                  \
   for (l = 0; l < lines; l++, pmd += 8) {                       \
     pre_code;                                                   \
-    p32x = dram + dram[l + (lines_sft_offs >> 24)];             \
+    p32x = fb_line(dram, dram[l + (lines_sft_offs >> 24)]);     \
     do_line_rl(dst, p32x, pmd, md_code);                        \
     post_code;                                                  \
     dst += DrawLineDestIncrement32x/2 - 320;                    \
