@@ -1289,6 +1289,36 @@ no_checks:
 /*
  * various cart-specific things, which can't be handled by generic code
  */
+// Aladdin: "The Escape" draws a second layer of lava in plane A, over the one
+// in plane B. Its last row is filled with level editor marker tiles (a box with
+// a cross), next to flat blocks of a single color, and its upper edge is a
+// dither pattern that only blends on a CRT. It's the only use of palette 1 in
+// the block table of the level (4 tile words per block), and the markers the
+// only one of palette 2, so those tiles are replaced with the empty one.
+// The table is the same in the USA and Europe versions, at different addresses.
+static void aladdin_remove_lava_layer(void)
+{
+  // the first blocks of the table, after the empty one
+  static const u16 start[] = {
+    0x0000,0x0077,0x0000,0x0000, 0x0068,0x12ca,0x0067,0x12bd,
+    0x12cb,0x12cc,0x12be,0x12bf, 0x12cd,0x0009,0x12f6,0x12f7,
+  };
+  u16 *rom = (u16 *)Pico.rom;
+  int words = Pico.romsize / 2, len = 2825 * 4 - 4;
+  int i, j;
+
+  for (i = 0; i + len <= words; i++) {
+    if (rom[i + 1] != start[1] || memcmp(rom + i, start, sizeof(start)) != 0)
+      continue;
+
+    for (j = i; j < i + len; j++)
+      if ((rom[j] & 0x6000) == 0x2000 || rom[j] == 0xc002)
+        rom[j] = 0;
+    elprintf(EL_STATUS, "auto-patching Aladdin blocks @%06x", (i - 4) * 2);
+    break;
+  }
+}
+
 static void PicoCartDetect(const char *carthw_cfg)
 {
   int carthw_detected = 0;
@@ -1326,6 +1356,12 @@ static void PicoCartDetect(const char *carthw_cfg)
   // assume the standard mapper for large roms
   if (!carthw_detected && Pico.romsize > 0x400000)
     carthw_ssf2_startup();
+
+  // the regional versions of Aladdin share the name and the serial
+  if (rom_strcmp(Pico.rom, Pico.romsize, 0x120, "ALADDIN  ") == 0 &&
+      rom_strcmp(Pico.rom, Pico.romsize, 0x150, "ALADDIN  ") == 0 &&
+      rom_strcmp(Pico.rom, Pico.romsize, 0x180, "GM MK-1058 ") == 0)
+    aladdin_remove_lava_layer();
 
   if (Pico.sv.flags & SRF_ENABLED)
   {
