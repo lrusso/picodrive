@@ -303,11 +303,6 @@ TileFlipMakerAS(TileFlipSH_AS_and, pix_sh_as_and)
 
 // --------------------------------------------
 
-// plane tile that isn't drawn because of a game hack, 0 if there's none
-static int hidden_tile;
-// palette bits of the plane A tiles that aren't drawn along with it, -1 if none
-static int hidden_pal_a;
-
 #define DrawTile(mask,yshift,ymask,hpcode,cache) {			\
   if (code!=oldcode) {							\
     oldcode = code;							\
@@ -320,10 +315,6 @@ static int hidden_pal_a;
 									\
       pal = ((code>>9)&0x30) | sh; /* shadow */				\
       pack = CPU_LE2(*(u32 *)(PicoMem.vram + addr));			\
-      /* a tile hidden by a game hack is drawn as a blank one */	\
-      if (unlikely(hidden_tile) && ((code & 0x7ff) == hidden_tile ||	\
-          (code & 0x6000) == hidden_pal))				\
-        pack = 0;							\
       if (!pack)							\
         blank = code;							\
     }									\
@@ -351,8 +342,6 @@ void funcname(struct TileStrip *ts, int lflags, int cellskip)		\
   int tilex, dx, ty, cells;						\
   u32 code, oldcode = -1, blank = -1; /* The tile we know is blank */	\
   u32 pal = 0, pack = 0, sh, mask = ~0;					\
-  /* palette hidden by a game hack, for plane A only */			\
-  u32 hidden_pal = (cache && !(lflags & LF_PLANE)) ? hidden_pal_a : -1;	\
 									\
   /* Draw tiles across screen: */					\
   sh = (lflags & LF_SH) << 6; /* shadow */				\
@@ -421,7 +410,6 @@ void funcname(struct TileStrip *ts, int lflags, int cellskip)		\
   u32 code, oldcode = -1, blank = -1; /* The tile we know is blank */	\
   u32 pal = 0, pack = 0, sh, plane, mask;				\
   int scan = Pico.est.DrawScanline<<(yshift-4);				\
-  const u32 hidden_pal = -1; /* game hacks don't need this mode */	\
 									\
   /* Draw tiles across screen: */					\
   sh = (lflags & LF_SH) << 6; /* shadow */				\
@@ -611,7 +599,6 @@ static void DrawWindow(int tstart, int tend, int prio, int sh,
   unsigned char *pd = est->HighCol;
   struct PicoVideo *pvid = &est->Pico->video;
   int tilex,ty,nametab,code,oldcode=-1,blank=-1; // The tile we know is blank
-  const u32 hidden_pal = -1; // game hacks don't hide window tiles
   int yshift,ymask;
   u32 pack=0, pal=0;
   u32 *hc=NULL, lflags=0; // referenced in DrawTile
@@ -1760,24 +1747,6 @@ PICO_INTERNAL void PicoFrameStart(void)
 
   // prepare to do this frame
   est->rendstatus = 0;
-
-  // Aladdin: hide tile 2 while it holds the level editor marker (a box with a
-  // cross). Other levels load real graphics there, which must still be drawn.
-  // That level draws a second layer of lava in plane A with palette 1, over the
-  // one in plane B. It has the marker tiles in its last row, flat blocks next to
-  // them and a dithered edge that only blends on a CRT, so it's hidden as well.
-  hidden_tile = 0;
-  hidden_pal_a = -1;
-  if (PicoIn.quirks & PQUIRK_ALADDIN_HACK) {
-    static const u16 marker[16] = {
-      0x1111,0x1111, 0x1100,0x0011, 0x1010,0x0101, 0x1001,0x1001,
-      0x1001,0x1001, 0x1010,0x0101, 0x1100,0x0011, 0x1111,0x1111,
-    };
-    if (memcmp(PicoMem.vram + 2*16, marker, sizeof(marker)) == 0) {
-      hidden_tile = 2;
-      hidden_pal_a = 1 << 13;
-    }
-  }
 
   if (PicoIn.AHW & PAHW_32X) // H32 upscaling, before mixing in 32X layer
     est->rendstatus = (*est->PicoOpt & POPT_ALT_RENDERER) ?

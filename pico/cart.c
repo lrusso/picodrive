@@ -1327,14 +1327,6 @@ static void PicoCartDetect(const char *carthw_cfg)
   if (!carthw_detected && Pico.romsize > 0x400000)
     carthw_ssf2_startup();
 
-  // Aladdin leaves a level editor marker tile visible in the bottom lines of
-  // "The Escape", which a CRT hides in its overscan. The regional versions share
-  // the name and the serial, so those identify the game (see PicoFrameStart).
-  if (rom_strcmp(Pico.rom, Pico.romsize, 0x120, "ALADDIN  ") == 0 &&
-      rom_strcmp(Pico.rom, Pico.romsize, 0x150, "ALADDIN  ") == 0 &&
-      rom_strcmp(Pico.rom, Pico.romsize, 0x180, "GM MK-1058 ") == 0)
-    PicoIn.quirks |= PQUIRK_ALADDIN_HACK;
-
   if (Pico.sv.flags & SRF_ENABLED)
   {
     if (Pico.sv.flags & SRF_EEPROM)
