@@ -1314,9 +1314,27 @@ static void aladdin_remove_lava_layer(void)
     for (j = i; j < i + len; j++)
       if ((rom[j] & 0x6000) == 0x2000 || rom[j] == 0xc002)
         rom[j] = 0;
-    elprintf(EL_STATUS, "auto-patching Aladdin blocks @%06x", (i - 4) * 2);
     break;
   }
+}
+
+// Doom (32X): the compressed SEGS lump of MAP10 has a wrong bit in the offset
+// of a back reference (135 instead of 143), so seg 656 gets the bytes 00 15 01
+// instead of 01 00 80. It should go along linedef 217 from vertex 282 to 271
+// (64 units, angle 0x8000), but ends at vertex 15 with angle 0x0115, 768 units
+// away. The game draws that wall with no height while the player is north of
+// it, so the ceiling and the floor show through. The offset is corrected in
+// the copy of the ROM in memory, which is the same in the USA and Europe
+// versions, at the same address.
+static void doom32x_fix_seg(void)
+{
+  u16 *rom = (u16 *)Pico.rom;
+  int addr = 0x294244;
+
+  if (addr + 2 > Pico.romsize || rom[addr / 2] != 0x0872)
+    return;
+
+  rom[addr / 2] = 0x08f2;
 }
 
 static void PicoCartDetect(const char *carthw_cfg)
@@ -1362,6 +1380,13 @@ static void PicoCartDetect(const char *carthw_cfg)
       rom_strcmp(Pico.rom, Pico.romsize, 0x150, "ALADDIN  ") == 0 &&
       rom_strcmp(Pico.rom, Pico.romsize, 0x180, "GM MK-1058 ") == 0)
     aladdin_remove_lava_layer();
+
+  // the regional versions of Doom for the 32X share the name and the serial
+  if (rom_strcmp(Pico.rom, Pico.romsize, 0x100, "SEGA 32X ") == 0 &&
+      rom_strcmp(Pico.rom, Pico.romsize, 0x120, "DOOM  ") == 0 &&
+      rom_strcmp(Pico.rom, Pico.romsize, 0x150, "DOOM  ") == 0 &&
+      rom_strcmp(Pico.rom, Pico.romsize, 0x180, "GM MK-84506-00") == 0)
+    doom32x_fix_seg();
 
   if (Pico.sv.flags & SRF_ENABLED)
   {
